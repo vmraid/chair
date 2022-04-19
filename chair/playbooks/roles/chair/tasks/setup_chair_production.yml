@@ -1,0 +1,28 @@
+---
+- name: Setup production
+  become: yes
+  become_user: root
+  command: chair setup production {{ vmraid_user }} --yes
+  args:
+    chdir: '{{ chair_path }}'
+
+- name: Setup Sudoers
+  become: yes
+  become_user: root
+  command: chair setup sudoers {{ vmraid_user }}
+  args:
+    chdir: '{{ chair_path }}'
+
+- name: Set correct permissions on chair.log
+  file:
+    path: '{{ chair_path }}/logs/chair.log'
+    owner: '{{ vmraid_user }}'
+    group: '{{ vmraid_user }}'
+  become: yes
+  become_user: root
+
+- name: Restart the chair
+  command: chair restart
+  args:
+    chdir: '{{ chair_path }}'
+...

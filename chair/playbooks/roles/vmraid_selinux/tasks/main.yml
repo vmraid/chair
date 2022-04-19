@@ -1,0 +1,25 @@
+---
+- name: Install deps
+  yum:
+    name:
+      - policycoreutils-python
+      - selinux-policy-devel
+    state: present
+  when: ansible_distribution == 'CentOS'
+
+- name: Check enabled SELinux modules
+  shell: semanage module -l
+  register: enabled_modules
+  when: ansible_distribution == 'CentOS'
+
+- name: Copy vmraid_selinux policy
+  copy: src=vmraid_selinux.te dest=/root/vmraid_selinux.te
+  register: dest_vmraid_selinux_te
+  when: ansible_distribution == 'CentOS'
+
+- name: Compile vmraid_selinux policy
+  shell: "make -f /usr/share/selinux/devel/Makefile vmraid_selinux.pp && semodule -i vmraid_selinux.pp"
+  args:
+    chdir: /root/
+  when: "ansible_distribution == 'CentOS' and enabled_modules.stdout.find('vmraid_selinux') == -1 or dest_vmraid_selinux_te.changed"
+...

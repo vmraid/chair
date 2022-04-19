@@ -1,0 +1,9 @@
+include *.md
+include *.py
+recursive-include chair *.conf
+recursive-include chair *.sh
+recursive-include chair *.py
+recursive-include chair *.txt
+recursive-include chair *.json
+recursive-include chair/config/templates *
+recursive-include chair/playbooks *

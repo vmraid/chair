@@ -1,0 +1,82 @@
+---
+  - name: Check if /tmp/.chair exists
+    stat:
+      path: /tmp/.chair
+    register: tmp_chair
+
+  - name: Check if chair_repo_path exists
+    stat:
+      path: '{{ chair_repo_path }}'
+    register: chair_repo_register
+
+  - name: move /tmp/.chair if it exists
+    command: 'cp -R /tmp/.chair {{ chair_repo_path }}'
+    when: tmp_chair.stat.exists and not chair_repo_register.stat.exists
+
+  - name: install chair
+    pip:
+      name: '{{ chair_repo_path }}'
+      extra_args: '-e'
+    become: yes
+    become_user: root
+
+  - name: Overwrite chair if required
+    file:
+      state: absent
+      path: "{{ chair_path }}"
+    when: overwrite
+
+  - name: Check whether chair exists
+    stat:
+      path: "{{ chair_path }}"
+    register: chair_stat
+
+  - name: Fix permissions
+    become_user: root
+    command: chown {{ vmraid_user }} -R {{ user_directory }}
+
+  - name:  python3 chair init for develop
+    command: chair init {{ chair_path }} --vmraid-path {{ vmraid_repo_url }} --vmraid-branch {{ vmraid_branch }} --python {{ python }}
+    args:
+      creates: "{{ chair_path }}"
+    when: not chair_stat.stat.exists and not production
+
+  - name: python3 chair init for production
+    command: chair init {{ chair_path }} --vmraid-path {{ vmraid_repo_url }} --vmraid-branch {{ vmraid_branch }} --python {{ python }}
+    args:
+      creates: "{{ chair_path }}"
+    when: not chair_stat.stat.exists and production
+
+  # setup common_site_config
+  - name: setup config
+    command: chair setup config
+    args:
+      creates: "{{ chair_path }}/sites/common_site_config.json"
+      chdir: "{{ chair_path }}"
+
+  - include_tasks: setup_inputrc.yml
+
+  # Setup Procfile
+  - name: Setup Procfile
+    command: chair setup procfile
+    args:
+      creates: "{{ chair_path }}/Procfile"
+      chdir: "{{ chair_path }}"
+
+  # Setup Redis env for RQ
+  - name: Setup Redis
+    command: chair setup redis
+    args:
+      creates: "{{ chair_path }}/config/redis_socketio.conf"
+      chdir: "{{ chair_path }}"
+
+  # Setup an ERPAdda site
+  - include_tasks: setup_erpadda.yml
+    when: not run_travis
+
+  # Setup Chair for production environment
+  - include_tasks: setup_chair_production.yml
+    vars:
+      chair_path: "{{ user_directory }}/{{ chair_name }}"
+    when: not run_travis and production
+...

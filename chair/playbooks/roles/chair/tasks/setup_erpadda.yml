@@ -1,0 +1,29 @@
+---
+  - name: Check if ERPAdda App exists
+    stat: path="{{ chair_path }}/apps/erpadda"
+    register: app
+
+  - name: Get the ERPAdda app
+    command: chair get-app erpadda {{ erpadda_repo_url }} --branch {{ erpadda_branch }}
+    args:
+      creates: "{{ chair_path }}/apps/erpadda"
+      chdir: "{{ chair_path }}"
+    when: not app.stat.exists and not without_erpadda
+
+  - name: Check whether the site already exists
+    stat: path="{{ chair_path }}/sites/{{ site }}"
+    register: site_folder
+    when: not without_site
+
+  - name: Create a new site
+    command: "chair new-site {{ site }} --admin-password '{{ admin_password }}' --mariadb-root-password '{{ mysql_root_password }}'"
+    args:
+      chdir: "{{ chair_path }}"
+    when: not without_site and not site_folder.stat.exists
+
+  - name: Install ERPAdda to default site
+    command: "chair --site {{ site }} install-app erpadda"
+    args:
+      chdir: "{{ chair_path }}"
+    when: not without_site and not without_erpadda
+...

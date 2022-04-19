@@ -1,0 +1,6 @@
+[Unit]
+After=network.target
+Requires={{ chair_name }}-web.target {{ chair_name }}-workers.target {{ chair_name }}-redis.target
+
+[Install]
+WantedBy=multi-user.target
